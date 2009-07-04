@@ -10,6 +10,50 @@
 include_once './includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
+//Drupal Functions
+
+function yourshare_help($section='') {
+
+  $output = '';
+
+  switch ($section) {
+    case "admin/help#yourshare":
+      $output = '<p>'.  t("Your Share is a Drupal module that shows members contribution to a Drupal website.
+"). '</p>';
+      break;
+  }
+
+  return $output;
+}
+
+function yourshare_perm() {
+  return array('access yourshare content');
+}
+
+
+function yourshare_menu() {
+
+  $items = array();
+
+  
+  $items[] = array(
+    'path' => 'yourshare',
+    'title' => t('Din Andel av Linuxportalen'),
+    'callback' => 'yourshare_all',
+    'access' => user_access('access yourshare content'),
+    'type' => MENU_CALLBACK,
+   );
+return $items;
+
+}
+
+
+
+//End Drupal functions
+
+
+//Non-drupal functions
+
 function tot_nodes() {
         $r = db_query("SELECT COUNT(nid) AS total FROM node");
         $o = db_fetch_object($r);
@@ -46,25 +90,29 @@ function avrunda($t, $d = 2) {
 }
 
 
+
+
+//End Non Drupal functions
+
+
+//Huvudfunktionen för att generera sidan
+function yourshare_all() {
 $tot_nodes = tot_nodes();
 $tot_comments = tot_comments();
 
-echo "<h1>Your share</h1>";
-echo "<p><strong>Totalt p&aring; webbplatsen</strong></p>";
-echo "<p>Antal noder: ".$tot_nodes."<br />Antal kommentarer: ".$tot_comments."</p>";
+global $user;
 
-echo "<p>Visa information om en anv&auml;ndare, skriv anv&auml;ndarnamnet h&auml;r:</p>";
-echo "<form method='post' action='yourshare.php'>\n";
-echo "<input type='text' name='username' />\n";
-echo "<input type='submit' value='Visa' name='subUserName' />\n";
-echo "</form>\n";
+$username = $user->name;
+$output = "<p><strong>Totalt p&aring; webbplatsen</strong>";
+$output .= "<br>Antal noder: ".$tot_nodes;
+$output .= "<br>Antal kommentarer: ".$tot_comments ."</p>";
 
-if(isset($_POST['subUserName'])) {
-        $username = $_POST['username'];
+//if(!$username = "") {
+        //$username = $_POST['username'];
         $r = db_query("SELECT uid FROM users WHERE name='%s' LIMIT 1", $username);
         $o = db_fetch_object($r);
         $uid = $o->uid;
-}
+//}
 if(isset($_GET['uid'])) {
         $uid = $_GET['uid'];
 }
@@ -72,40 +120,41 @@ if(!is_numeric($uid)) {
         exit();
 }
 
-
 $usernodes = get_user_nodes($uid);
 $usercomments = get_user_comments($uid);
 
+$output .= "<p><b>".get_username($uid)."</b><br>";
+$output .=   "Antal kommentarer: ".avrunda(($usercomments/$tot_comments)*100)."%";
+$output .=  "<br />Antal noder: ".avrunda(($usernodes/$tot_nodes)*100)."%</p>";
 
-echo "<h2>".get_username($uid)."</h2>";
-echo "<p>Antal kommentarer: ".avrunda(($usercomments/$tot_comments)*100)."%";
-echo "<br />Antal noder: ".avrunda(($usernodes/$tot_nodes)*100)."%</p>";
-
-echo "<h2>Tio i topp - noder</h2>";
+$output .= "<b>Tio i topp - noder</b><br>";
 $r = db_query("select node.uid,count(node.nid) AS antal, users.name AS username FROM node INNER JOIN users ON node.uid=users.uid WHERE node.uid != 0 GROUP BY uid ORDER BY antal DESC LIMIT 10");
 
 while($o = db_fetch_object($r)) {
 if($o->uid == $uid) {
-echo "<div style='background: yellow'>";
+$output .= "<div style='background: yellow'>";
 }
-        echo $o->username." : ".$o->antal." noder (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
+        $output .= $o->username." : ".$o->antal." noder (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
 if($o->uid == $uid) {
-echo "</div>";
+$output .= "</div>";
 }
 
 }
 
-echo "<h2>Tio i topp - kommentarer</h2>";
+$output .= "<b>Tio i topp - kommentarer</b><br>";
 $r = db_query("select comments.uid,count(comments.cid) AS antal, users.name AS username FROM comments INNER JOIN users ON comments.uid=users.uid WHERE comments.uid != 0 GROUP BY uid ORDER BY antal DESC LIMIT 10");
 
 while($o = db_fetch_object($r)) {
 if($o->uid == $uid) {
-echo "<div style='background: yellow'>";
+$output .= "<div style='background: yellow'>";
 }
 
-        echo $o->username." : ".$o->antal." kommentarer (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
+         $output .= $o->username." : ".$o->antal." kommentarer (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
 if($o->uid == $uid) {
-echo "</div>";
+$output .= "</div>";
 }
 
+}
+
+return $output;
 }
