@@ -45,6 +45,28 @@ function avrunda($t, $d = 2) {
         return round($t*$a)/$a;
 }
 
+// mysql> select count(cid) FROM comments WHERE length(comment) >= 1000;
+// mysql> select count(cid) FROM comments WHERE uid=4 and length(comment) >= 1000;
+
+// mysql> select count(*) from node_revisions;
+// mysql> select count(*) from node_revisions where length(body) > 1000;
+
+// räkna ut hur många veckor en användare varit medlem
+// mysql> select name, (datediff(now(),from_unixtime(created))/7)/10 as weekpnt from users where uid=4;
+
+// mysql> select uid from users where length(signature) >20;
+
+// hur många publiceringar är på framsidan?
+//mysql> select count(promote) from node where promote=1 and uid=4;
+
+// dela dessa med 100 för poäng
+//mysql> select count(nid) from node where type='blog' and uid=4;
+//mysql> select count(nid) from node where type='forum' and uid=4;
+// mysql> select count(nid) from node where type='story' and uid=4;
+
+
+
+
 
 $tot_nodes = tot_nodes();
 $tot_comments = tot_comments();
@@ -103,7 +125,7 @@ if($o->uid == $uid) {
 echo "<div style='background: yellow'>";
 }
 
-        echo $o->username." : ".$o->antal." kommentarer (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
+        echo $o->username." : ".$o->antal." kommentarer (".avrunda(($o->antal/$tot_comments)*100)."%)<br />";
 if($o->uid == $uid) {
 echo "</div>";
 }
