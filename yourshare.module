@@ -47,7 +47,26 @@ return $items;
 
 }
 
+function yourshare_block($op='list', $delta=0) {
+ 
+if ($op == "list") {
+     $block[0]["info"] = t('Your Share');
+     return $block;
+  }
 
+else if ($op == 'view') {
+
+$block_content = "Test";
+
+$block_content = "Total nodes: " . tot_nodes(); 
+$block_content .= "<br>Total comments: " . tot_comments();
+ $block['subject'] = 'Total Shares'; 
+  $block['content'] = $block_content;
+  return $block;
+
+}
+
+} 
 
 //End Drupal functions
 
