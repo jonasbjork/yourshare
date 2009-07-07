@@ -1,3 +1,5 @@
 ; $Id$
 name = Your Share
-description = "Your Share is a Drupal module that shows members contribution to a Drupal website."
+description = Your Share is a Drupal module that shows members contribution to a Drupal website.
+core = 6.x
+version = 1.0

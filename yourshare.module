@@ -18,8 +18,7 @@ function yourshare_help($section='') {
 
   switch ($section) {
     case "admin/help#yourshare":
-      $output = '<p>'.  t("Your Share is a Drupal module that shows members contribution to a Drupal website.
-"). '</p>';
+      $output = '<p>'.  t("Your Share is a Drupal module that shows members contribution to a Drupal website."). '</p>';
       break;
   }
 
@@ -38,7 +37,7 @@ function yourshare_menu() {
   
   $items[] = array(
     'path' => 'yourshare',
-    'title' => t('Din Andel av Linuxportalen'),
+    'title' => t('Your share'),
     'callback' => 'yourshare_all',
     'access' => user_access('access yourshare content'),
     'type' => MENU_CALLBACK,
@@ -48,24 +47,17 @@ return $items;
 }
 
 function yourshare_block($op='list', $delta=0) {
- 
-if ($op == "list") {
-     $block[0]["info"] = t('Your Share');
-     return $block;
-  }
-
-else if ($op == 'view') {
-
-$block_content = "Test";
-
-$block_content = "Total nodes: " . tot_nodes(); 
-$block_content .= "<br>Total comments: " . tot_comments();
- $block['subject'] = 'Total Shares'; 
-  $block['content'] = $block_content;
-  return $block;
-
-}
-
+	if ($op == "list") {
+		 $block[0]["info"] = t('Your Share');
+		 return $block;
+	}
+	else if ($op == 'view') {
+		$block_content = "Total nodes: " . tot_nodes(); 
+		$block_content .= "<br>Total comments: " . tot_comments();
+		$block['subject'] = 'Your Share'; 
+		$block['content'] = $block_content;
+		return $block;
+	}
 } 
 
 //End Drupal functions
@@ -74,106 +66,90 @@ $block_content .= "<br>Total comments: " . tot_comments();
 //Non-drupal functions
 
 function tot_nodes() {
-        $r = db_query("SELECT COUNT(nid) AS total FROM node");
+        $r = db_query("SELECT COUNT(nid) AS total FROM {node}");
         $o = db_fetch_object($r);
         return $o->total;
 }
 
 function tot_comments() {
-        $r = db_query("SELECT COUNT(cid) AS total FROM comments");
+        $r = db_query("SELECT COUNT(cid) AS total FROM {comments}");
         $o = db_fetch_object($r);
         return $o->total;
 }
 
 function get_username($uid) {
-        $r = db_query("SELECT name FROM users WHERE uid='%d' LIMIT 1", $uid);
+        $r = db_query("SELECT name FROM {users} WHERE uid='%d' LIMIT 1", $uid);
         $o = db_fetch_object($r);
         return $o->name;
 }
 
 function get_user_nodes($uid) {
-        $r = db_query("SELECT COUNT(nid) AS usernodes FROM node WHERE uid='%d'", $uid);
+        $r = db_query("SELECT COUNT(nid) AS usernodes FROM {node} WHERE uid='%d'", $uid);
         $o = db_fetch_object($r);
         return $o->usernodes;
 }
 
 function get_user_comments($uid) {
-        $r = db_query("SELECT COUNT(cid) AS usercomments FROM comments WHERE uid='%d'", $uid);
+        $r = db_query("SELECT COUNT(cid) AS usercomments FROM {comments} WHERE uid='%d'", $uid);
         $o = db_fetch_object($r);
         return $o->usercomments;
 }
 
 function avrunda($t, $d = 2) {
-        $a = pow(10, $d);
-        return round($t*$a)/$a;
+	$a = pow(10, $d);
+	return round($t*$a)/$a;
 }
-
-
-
 
 //End Non Drupal functions
 
 
 //Huvudfunktionen för att generera sidan
 function yourshare_all() {
-$tot_nodes = tot_nodes();
-$tot_comments = tot_comments();
+	$tot_nodes = tot_nodes();
+	$tot_comments = tot_comments();
 
-global $user;
+	global $user;
+	$username = $user->name;
+	
+	$output = "<p><strong>".t('Totals')."</strong>";
+	$output .= "<br>".t('Nodes').": ".$tot_nodes;
+	$output .= "<br>".t('Comments').": ".$tot_comments ."</p>";
 
-$username = $user->name;
-$output = "<p><strong>Totalt p&aring; webbplatsen</strong>";
-$output .= "<br>Antal noder: ".$tot_nodes;
-$output .= "<br>Antal kommentarer: ".$tot_comments ."</p>";
+	$r = db_query("SELECT uid FROM {users} WHERE name='%s' LIMIT 1", $username);
+	$o = db_fetch_object($r);
+	$uid = $o->uid;
+	
+	$usernodes = get_user_nodes($uid);
+	$usercomments = get_user_comments($uid);
 
-//if(!$username = "") {
-        //$username = $_POST['username'];
-        $r = db_query("SELECT uid FROM users WHERE name='%s' LIMIT 1", $username);
-        $o = db_fetch_object($r);
-        $uid = $o->uid;
-//}
-if(isset($_GET['uid'])) {
-        $uid = $_GET['uid'];
-}
-if(!is_numeric($uid)) {
-        exit();
-}
+	$output .= "<p><b>".$user->name."</b><br>";
+	$output .=   "Antal kommentarer: ".avrunda(($usercomments/$tot_comments)*100)."%";
+	$output .=  "<br />Antal noder: ".avrunda(($usernodes/$tot_nodes)*100)."%</p>";
 
-$usernodes = get_user_nodes($uid);
-$usercomments = get_user_comments($uid);
+	$output .= "<b>Tio i topp - noder</b><br>";
+	$r = db_query("select node.uid,count(node.nid) AS antal, users.name AS username FROM {node} INNER JOIN {users} ON node.uid=users.uid WHERE node.uid != 0 GROUP BY uid ORDER BY antal DESC LIMIT 10");
 
-$output .= "<p><b>".get_username($uid)."</b><br>";
-$output .=   "Antal kommentarer: ".avrunda(($usercomments/$tot_comments)*100)."%";
-$output .=  "<br />Antal noder: ".avrunda(($usernodes/$tot_nodes)*100)."%</p>";
+	while($o = db_fetch_object($r)) {
+		if($o->uid == $uid) {
+			$output .= "<div style='background: yellow'>";
+		}
+		$output .= $o->username." : ".$o->antal." noder (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
+		if($o->uid == $uid) {
+			$output .= "</div>";
+		}
+	}
 
-$output .= "<b>Tio i topp - noder</b><br>";
-$r = db_query("select node.uid,count(node.nid) AS antal, users.name AS username FROM node INNER JOIN users ON node.uid=users.uid WHERE node.uid != 0 GROUP BY uid ORDER BY antal DESC LIMIT 10");
+	$output .= "<b>Tio i topp - kommentarer</b><br>";
+	$r = db_query("select comments.uid,count(comments.cid) AS antal, users.name AS username FROM {comments} INNER JOIN {users} ON comments.uid=users.uid WHERE comments.uid != 0 GROUP BY uid ORDER BY antal DESC LIMIT 10");
 
-while($o = db_fetch_object($r)) {
-if($o->uid == $uid) {
-$output .= "<div style='background: yellow'>";
-}
-        $output .= $o->username." : ".$o->antal." noder (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
-if($o->uid == $uid) {
-$output .= "</div>";
-}
-
-}
-
-$output .= "<b>Tio i topp - kommentarer</b><br>";
-$r = db_query("select comments.uid,count(comments.cid) AS antal, users.name AS username FROM comments INNER JOIN users ON comments.uid=users.uid WHERE comments.uid != 0 GROUP BY uid ORDER BY antal DESC LIMIT 10");
-
-while($o = db_fetch_object($r)) {
-if($o->uid == $uid) {
-$output .= "<div style='background: yellow'>";
-}
-
-         $output .= $o->username." : ".$o->antal." kommentarer (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
-if($o->uid == $uid) {
-$output .= "</div>";
-}
-
-}
-
-return $output;
+	while($o = db_fetch_object($r)) {
+		if($o->uid == $uid) {
+			$output .= "<div style='background: yellow'>";
+		}
+		$output .= $o->username." : ".$o->antal." kommentarer (".avrunda(($o->antal/$tot_nodes)*100)."%)<br />";
+		if($o->uid == $uid) {
+			$output .= "</div>";
+		}
+	}
+	return $output;
 }
